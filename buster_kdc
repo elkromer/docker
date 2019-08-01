@@ -14,8 +14,26 @@ RUN wget http://snapshot.debian.org/archive/debian/20141009T221019Z/pool/main/o/
 RUN wget https://web.mit.edu/kerberos/dist/krb5/1.16/krb5-1.16.3.tar.gz && tar -xzvf krb5-1.16.3.tar.gz && cd /krb5-1.16.3/src && ./configure && make 
 RUN cd /krb5-1.16.3/src && make install
 
+RUN echo 'export KRB5_CONFIG=/krb5-1.16.3/src/config-files/krb5.conf' >> /root/.bashrc
+RUN echo 'export KRB5_KDC_PROFILE=/krb5-1.16.3/src/config-files/kdc.conf' >> /root/.bashrc
+RUN echo 'export LD_LIBRARY_PATH=/krb5-1.16.3/src/lib' >> /root/.bashrc
+RUN echo '    default = FILE:/default.log' >> /krb5-1.16.3/src/config-files/krb5.conf
+RUN echo '    kdc = FILE:/kdc.log' >> /krb5-1.16.3/src/config-files/krb5.conf
+RUN echo '    admin_server = FILE:/kadmin.log' >> /krb5-1.16.3/src/config-files/krb5.conf
+ENV KRB5_CONFIG /krb5-1.16.3/src/config-files/krb5.conf
+ENV KRB5_KDC_PROFILE /krb5-1.16.3/src/config-files/kdc.conf
+ENV LD_LIBRARY_PATH /krb5-1.16.3/src/lib
+
+RUN touch /usr/local/var/krb5kdc/kadm5.acl
+RUN echo "reese@ATHENA.MIT.EDU  *" >> /usr/local/var/krb5kdc/kadm5.acl
 
 RUN echo "sshd:x:74:74:Privilege-separated SSH:/var/empty/sshd:/sbin/nologin" >> /etc/passwd
+
+RUN apt-get install -y expect
+COPY ./bash/create-krb5-database.sh /
+RUN expect create-krb5-database.sh
+
+RUN /usr/local/sbin/krb5kdc && /usr/local/sbin/kadmind
 
 RUN groupadd sftpdrive.tests
 RUN useradd test -m -s /bin/bash
@@ -23,7 +41,7 @@ RUN usermod -aG sftpdrive.tests test
 RUN echo 'test:nbanana' | chpasswd
 RUN echo 'root:nbanana' | chpasswd
 
-
-
+#Enter KDC database master key:
+#Re-enter KDC database master key to verify:
 
 EXPOSE 22
