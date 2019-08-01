@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+<!--
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License. See accompanying LICENSE file.
+-->
+
+<!-- Put site-specific property overrides in this file. -->
+
+<configuration>
+  <property>
+    <name>dfs.replication</name>
+    <value>1</value>
+  </property>
+  <property>
+    <name>dfs.namenode.name.dir</name>
+    <value>file:///opt/hadoop_storage/namenode</value>
+  </property>
+  <property>
+    <name>dfs.namenode.checkpoint.dir</name>
+    <value>file:///opt/hadoop_storage/namenode2</value>
+  </property>
+  <!-- Need to lower the minimum block size to 512 bytes for the 
+       unit tests' sake. Note that the default block size is 
+       unchanged, this just lets us manually specify a very small
+       block size for certain tests. -->
+  <property>
+    <name>dfs.namenode.fs-limits.min-block-size</name>
+    <value>512</value>
+  </property>
+  <property>
+    <name>dfs.datanode.data.dir</name>
+    <value>file:///opt/hadoop_storage/datanode</value>
+  </property>
+  <!-- Need to explicitly specify the data node's hostname as being
+       our public IP address since this is all local. Otherwise the
+       WebHDFS operations that require the name node to redirect to
+       the data node will use localhost and fail (since that would
+       only be valid on this machine, obviously). -->
+  <property>
+    <name>dfs.datanode.hostname</name>
+    <value>nix</value>
+  </property>
+
+</configuration>

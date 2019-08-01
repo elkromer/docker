@@ -1,0 +1,23 @@
+#docker run -d --restart=always --name=ipworksmq_rabbitmq -p 55771:5771 -p 55772:5772 -p 55673:15672 rabbitmq ./init.sh
+
+FROM centos:7
+
+
+ENV RABBITMQ_USER=nunit
+ENV RABBITMQ_PASSWORD=nbanana
+ENV LANG     en_US.UTF-8
+ENV LANGUAGE en_US.UTF-8
+ENV LC_ALL   en_US.UTF-8
+ARG RPMVER=rabbitmq-server-3.7.16-1.el7.noarch.rpm
+
+COPY ./dockerconfig/rabbitmq/rabbitmq_erlang.repo /etc/yum.repos.d/rabbitmq_erlang.repo
+COPY ./dockerconfig/rabbitmq/init.sh ./init.sh
+
+RUN yum update -y && yum install -y erlang wget && wget --content-disposition https://packagecloud.io/rabbitmq/rabbitmq-server/packages/el/7/${RPMVER}/download.rpm && yum install -y ${RPMVER} \
+ && chmod +x ./init.sh \
+ && rabbitmq-plugins enable rabbitmq_management && rabbitmq-plugins enable rabbitmq_amqp1_0 
+
+COPY ./dockerconfig/rabbitmq/certs/* /etc/rabbitmq/certs/
+COPY ./dockerconfig/rabbitmq/rabbitmq.conf /etc/rabbitmq/rabbitmq.conf
+
+EXPOSE 5771 5772 15672

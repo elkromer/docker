@@ -1,0 +1,20 @@
+# docker run -d -it --restart=always --name=ipworksssh_openssh79_pubkey -p 2222:22 ubuntu14_openssh79_pubkey
+FROM ubuntu:14.04
+
+RUN apt-get update && apt-get install -y --no-install-recommends apt-utils && mkdir /var/run/sshd && apt-get install -y wget && apt-get install -y make && apt-get install -y gcc && apt-get install -y libz-dev && apt-get install -y libssl-dev
+
+RUN wget https://www.openssl.org/source/openssl-1.0.2s.tar.gz && tar -xvf openssl-1.0.2s.tar.gz && cd /openssl-1.0.2s && ./config no-asm && make && make install_sw
+RUN wget https://openbsd.cs.toronto.edu/pub/OpenBSD/OpenSSH/portable/openssh-7.9p1.tar.gz && tar -xvf openssh-7.9p1.tar.gz && cd /openssh-7.9p1 && ./configure && make && make install
+
+RUN echo "sshd:x:74:74:Privilege-separated SSH:/var/empty/sshd:/sbin/nologin" >> /etc/passwd 
+
+RUN groupadd reese.test
+RUN useradd test -m -s /bin/bash
+RUN usermod -aG reese.test test
+RUN echo 'test:nbanana' | chpasswd
+RUN echo 'root:nbanana' | chpasswd
+
+COPY ./files/nix.pub /home/test/.ssh/authorized_keys
+
+EXPOSE 22
+CMD ["/openssh-7.9p1/sshd", "-D"]

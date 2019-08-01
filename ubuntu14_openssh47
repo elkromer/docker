@@ -1,0 +1,37 @@
+# Get Ubuntu base image
+FROM ubuntu:14.04
+
+
+#needed for wget
+RUN echo 'debconf debconf/frontend select Noninteractive' | debconf-set-selections
+ENV TERM linux
+
+# Get update and install apt-utils (needed for openssl and openssh source code)
+RUN apt-get update && apt-get install -y --no-install-recommends apt-utils
+
+# Install baseline dependencies for openssh
+RUN mkdir /var/run/sshd && apt-get install -y wget && apt-get install -y make && apt-get install -y gcc && apt-get install -y libz-dev && apt-get install -y libssl-dev
+
+# Get and install openssl source
+RUN wget https://www.openssl.org/source/old/0.9.x/openssl-0.9.8f.tar.gz
+RUN tar -xvf openssl-0.9.8f.tar.gz
+
+# The problem right now is that -m486 is an unknown parameter for gcc, online said to replace this parameter in configure and makefile with the correct name
+RUN cd /openssl-0.9.8f && ./config no-asm && make
+
+# Get and install openssh source
+RUN wget  https://openbsd.mirror.constant.com/pub/OpenBSD/OpenSSH/portable/openssh-4.7p1.tar.gz
+RUN echo "sshd:x:74:74:Privilege-separated SSH:/var/empty/sshd:/sbin/nologin" >> /etc/passwd
+RUN tar -xvf openssh-4.7p1.tar.gz && cd /openssh-4.7p1 && ./configure && make && make install
+
+#not working
+#ENV PATH "$PATH:/openssh-4.7p1"
+
+#change root password
+RUN echo 'root:nbanana' | chpasswd
+
+RUN sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /usr/local/etc/sshd_config
+
+#expose and run
+EXPOSE 22
+CMD ["/openssh-4.7p1/sshd", "-D"]

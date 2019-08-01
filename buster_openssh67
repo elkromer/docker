@@ -1,0 +1,21 @@
+# docker run -d -it --restart=always --name=ipworksssh_buster_openssh67 -p 50024:22 buster_openssh67 /bin/bash -c "/usr/local/sbin/sshd -D"
+
+FROM debian:buster
+
+RUN echo 'debconf debconf/frontend select Noninteractive' | debconf-set-selections
+ENV TERM linux
+
+RUN apt-get update && apt install -y sudo && apt install -y lsb-release && apt-get install -y --no-install-recommends apt-utils && apt-get install -y gcc && apt-get install -y wget && apt-get install -y xz-utils && apt-get install -y libz-dev && apt-get install -y libssl-dev && apt-get install -y make
+
+RUN wget https://www.openssl.org/source/old/0.9.x/openssl-0.9.8f.tar.gz && tar -xzvf openssl-0.9.8f.tar.gz && cd /openssl-0.9.8f && ./config no-asm && make && make install
+RUN wget http://snapshot.debian.org/archive/debian/20141009T221019Z/pool/main/o/openssh/openssh_6.7p1.orig.tar.gz && tar -xzvf openssh_6.7p1.orig.tar.gz && cd openssh-6.7p1 && ./configure --with-ssl-dir=/openssl-0.9.8f && make && make install && mkdir /var/run/sshd
+
+RUN echo "sshd:x:74:74:Privilege-separated SSH:/var/empty/sshd:/sbin/nologin" >> /etc/passwd
+
+RUN groupadd sftpdrive.tests
+RUN useradd test -m -s /bin/bash
+RUN usermod -aG sftpdrive.tests test
+RUN echo 'test:nbanana' | chpasswd
+RUN echo 'root:nbanana' | chpasswd
+
+EXPOSE 22

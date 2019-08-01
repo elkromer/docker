@@ -1,0 +1,22 @@
+# getting base image
+# "SSH-2.0-OpenSSH_5.3"
+FROM centos:6.7
+
+RUN yum -y upgrade && yum -y install openssh-server
+
+#change user password
+RUN adduser docker && echo 'docker:nbanana' | chpasswd && chown docker:docker /home/docker && usermod -aG wheel docker && true
+
+#edit sshd_config to permit root login
+RUN sed -i 's/#PermitRootLogin no/PermitRootLogin yes/' /etc/ssh/sshd_config
+RUN /usr/bin/ssh-keygen -t rsa -b 4096 -f /etc/ssh/ssh_host_rsa_key
+RUN /usr/bin/ssh-keygen -t dsa -b 1024 -f /etc/ssh/ssh_host_dsa_key
+
+RUN echo "AllowUsers docker" >> /etc/ssh/sshd_config
+
+#need this line or else sshd fails with "missing priviledge separation directory"
+RUN echo "sshd:x:74:74:Privilege-separated SSH:/var/empty/sshd:/sbin/nologin" >> /etc/passwd
+
+#expose and run
+EXPOSE 22
+CMD ["/usr/sbin/sshd", "-D"]

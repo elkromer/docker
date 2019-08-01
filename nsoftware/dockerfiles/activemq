@@ -1,0 +1,19 @@
+#docker run -d --restart=always --name=ipworksmq_activemq -p 55671:5671 -p 55672:5672 -p 51612:61612 -p 51613:61613 -p 51614:61614 -p 51615:61615 -p 51883:1883 -p 58883:8883 activemq ./bin/activemq console
+
+FROM centos:7
+
+ARG VER=1.8.0.191.b12-1.el7_6.x86_64
+ENV JAVA_HOME=/usr/lib/jvm/java-1.8.0-openjdk-${VER}
+
+RUN yum install -y wget java-1.8.0-openjdk-1:${VER} java-1.8.0-openjdk-devel-1:${VER}
+
+RUN wget -O "apache-activemq-5.15.9-bin.tar.gz" http://mirror.bit.edu.cn/apache//activemq/5.15.9/apache-activemq-5.15.9-bin.tar.gz \
+ && mkdir /usr/local/software && tar -zxvf apache-activemq-5.15.9-bin.tar.gz -C /usr/local/software && rm -rf apache-activemq-5.15.9-bin.tar.gz \
+ && mv /usr/local/software/apache-activemq-* /usr/local/software/apache-activemq 
+
+COPY ./dockerconfig/activemq/certs/*      /usr/local/software/apache-activemq/conf/
+COPY ./dockerconfig/activemq/activemq.xml /usr/local/software/apache-activemq/conf/
+
+WORKDIR /usr/local/software/apache-activemq
+
+EXPOSE 5671 5672 61612 61613 61614 61615 1883 8883

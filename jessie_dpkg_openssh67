@@ -1,0 +1,27 @@
+# getting base image
+# "SSH-2.0-OpenSSH_6.7p1 Debian-5+deb8u7"
+FROM debian:jessie
+
+# needed for wget
+RUN echo 'debconf debconf/frontend select Noninteractive' | debconf-set-selections
+ENV TERM linux
+
+# apt utils and openssh
+RUN apt-get update && apt install -y sudo && apt install -y lsb-release && apt-get install -y --no-install-recommends apt-utils && apt-get install -y openssh-server && apt-get install -y gcc 
+RUN mkdir /var/run/sshd
+
+#change user password
+RUN useradd docker && echo 'docker:nbanana' | chpasswd && mkdir /home/docker && chown docker:docker /home/docker && addgroup docker sudo && true
+
+#edit sshd_config to permit root login
+RUN sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config
+RUN echo "AllowUsers docker" >> /etc/ssh/sshd_config
+#need this line or else sshd fails with "missing priviledge separation directory"
+RUN echo "sshd:x:74:74:Privilege-separated SSH:/var/empty/sshd:/sbin/nologin" >> /etc/passwd
+
+#docker known bug
+RUN sed 's@session\s*required\s*pam_loginuid.so@session optional pam_loginuid.so@g' -i /etc/pam.d/sshd
+
+#expose and run
+EXPOSE 22
+CMD ["/usr/sbin/sshd", "-D"]

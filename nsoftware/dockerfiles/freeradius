@@ -1,0 +1,23 @@
+#docker run -d -p 1812:1812/udp --restart=always --name=ipworksauth_freeradius freeradius /bin/bash -c "radiusd -X"
+
+
+FROM centos:7
+
+RUN yum install -y libtalloc-devel openssl-devel openssl build-essential gcc automake autoconf libtool make
+
+RUN yum install -y wget && wget -O "freeradius-server-3.0.19.tar.gz" "https://codeload.github.com/FreeRADIUS/freeradius-server/tar.gz/release_3_0_19" \
+ && tar xzf freeradius-server-3.0.19.tar.gz && cd freeradius-server-release_3_0_19 && ./configure && make && make install \
+ && rm -f freeradius-server-3.0.19.tar.gz && cd .. && rm -rf freeradius-server-release_3_0_19
+
+COPY ./dockerconfig/freeradius/certs/*      /usr/local/etc/raddb/certs/
+COPY ./dockerconfig/freeradius/clients.conf /usr/local/etc/raddb/clients.conf
+COPY ./dockerconfig/freeradius/authorize    /usr/local/etc/raddb/mods-config/files/authorize
+
+RUN chmod 400 /usr/local/etc/raddb/clients.conf && chmod 400 /usr/local/etc/raddb/mods-config/files/authorize \
+  && cd /usr/local/etc/raddb/certs && chmod 400 ca.pem && chmod 400 server.pem
+
+
+EXPOSE 1812
+EXPOSE 1813
+
+

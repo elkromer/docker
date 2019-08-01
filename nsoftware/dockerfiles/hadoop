@@ -1,0 +1,48 @@
+#docker run -dit -p 52122:52122 -p 50070:50070 -p 9000:9000 -p 58443:8443 -p 50075:50075 -p 50010:50010 -u hadoop --restart=always --name=ipworkscloud_hadoop hadoop ./init.sh
+
+FROM centos:7
+
+ARG VER=1.8.0.191.b12-1.el7_6.x86_64
+ARG HADOOPVER=hadoop-2.9.0
+ARG KNOXVER=knox-1.2.0
+
+ENV KNOX_HOME=$HADOOP_HOME/knox
+ENV PATH=$PATH:$KNOX_HOME/bin
+#KA need proxy
+#ENV http_proxy http://192.168.0.188:1081
+
+RUN useradd -d /opt/hadoop hadoop && echo "nbanana" | passwd hadoop --stdin \
+ && yum update -y && yum install -y openssh-server openssh-clients unzip which wget java-1.8.0-openjdk-1:${VER} java-1.8.0-openjdk-devel-1:${VER} sudo \
+ && echo "hadoop ALL=(ALL) NOPASSWD: /usr/bin/chmod" >>  /etc/sudoers 
+
+COPY ./dockerconfig/hadoop/hadoop-env.sh /etc/profile.d/hadoop-env.sh
+COPY ./dockerconfig/hadoop/init.sh       /opt/hadoop/init.sh
+COPY ./dockerconfig/hosts                /etc/hosts.local
+
+RUN wget -O /opt/hadoop/${HADOOPVER}.tar.gz http://apache.mirrors.hoobly.com/hadoop/common/${HADOOPVER}/${HADOOPVER}.tar.gz \
+ && wget -O /opt/hadoop/${KNOXVER}.zip      http://apache.mirrors.lucidnetworks.net/knox/1.2.0/${KNOXVER}.zip \
+ && tar -zxf /opt/hadoop/${HADOOPVER}.tar.gz -C /opt/hadoop/ && mv -f /opt/hadoop/${HADOOPVER}/* /opt/hadoop/ \
+ && unzip -q /opt/hadoop/${KNOXVER}.zip -d /opt/hadoop/ && mv /opt/hadoop/${KNOXVER} /opt/hadoop/knox \
+ && rm -f /opt/hadoop/${HADOOPVER}.tar.gz \
+ && rm -f /opt/hadoop/${KNOXVER}.zip 
+
+RUN  mkdir -p /opt/hadoop_storage/namenode \
+ && mkdir -p /opt/hadoop_storage/namenode2 \
+ && mkdir -p /opt/hadoop_storage/datanode \
+ && chown -R hadoop:hadoop /opt/hadoop \
+ && chown -R hadoop:hadoop /opt/hadoop_storage \
+ && chown -R hadoop:hadoop /opt/hadoop/knox \
+ && chmod 644 /etc/profile.d/hadoop-env.sh \
+ && chmod 777 /opt/hadoop/init.sh
+
+COPY ./dockerconfig/hadoop/core-site.xml ./dockerconfig/hadoop/hdfs-site.xml ./dockerconfig/hadoop/slaves ./dockerconfig/hadoop/sandbox.xml ./dockerconfig/hadoop/gateway-site.xml /opt/hadoop/etc/hadoop/
+
+RUN ssh-keygen -A && ssh-keygen -t rsa -P '' -f ~/.ssh/id_rsa && cat ~/.ssh/id_rsa.pub >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys \
+ && mkdir /opt/hadoop/.ssh && cp /root/.ssh/* /opt/hadoop/.ssh/ && chown -R hadoop:hadoop /opt/hadoop/.ssh && chown -R hadoop:hadoop /etc/ssh \
+ && echo "StrictHostKeyChecking no" >> /etc/ssh/ssh_config \
+ && echo "Port 52122" >> /etc/ssh/ssh_config \
+ && echo "Port 52122" >> /etc/ssh/sshd_config 
+
+WORKDIR /opt/hadoop/
+EXPOSE 8443 9000 50070 50075 50010 52122
+

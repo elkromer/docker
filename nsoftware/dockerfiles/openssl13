@@ -1,0 +1,26 @@
+#docker run -d -p 10443:443 -it --restart=always --name=ipworks_openssl13_rsa openssl13 /bin/bash -c "cd /usr/local/openssl-1.1.1c && ./bin/openssl s_server -accept 443 -cert mycert.pem -www -debug -tls1_3 -msg"
+#docker run -d -p 10444:443 -it --restart=always --name=ipworks_openssl13_ec256 openssl13 /bin/bash -c "cd /usr/local/openssl-1.1.1c && ./bin/openssl s_server -accept 443 -cert myec256cert.pem -www -debug -tls1_3 -msg"
+#docker run -d -p 10445:443 -it --restart=always --name=ipworks_openssl13_ec384 openssl13 /bin/bash -c "cd /usr/local/openssl-1.1.1c && ./bin/openssl s_server -accept 443 -cert myec384cert.pem -www -debug -tls1_3 -msg"
+#docker run -d -p 10446:443 -it --restart=always --name=ipworks_openssl13_ec512 openssl13 /bin/bash -c "cd /usr/local/openssl-1.1.1c && ./bin/openssl s_server -accept 443 -cert myec512cert.pem -www -debug -tls1_3 -msg"
+
+FROM centos:7
+
+RUN yum install -y build-essential gcc automake autoconf libtool make
+
+RUN yum install -y wget && wget -O "openssl-1.1.1c.tar.gz" "https://www.openssl.org/source/openssl-1.1.1c.tar.gz" \
+ && tar -xzf openssl-1.1.1c.tar.gz && cd openssl-1.1.1c/ && ./config --prefix=/usr/local/openssl-1.1.1c && make && make install \
+ && echo "/usr/local/openssl-1.1.1c/lib/" >> /etc/ld.so.conf && ldconfig -v  && cd .. && rm -rf openssl-1.1.1c.tar.gz && rm -rf openssl-1.1.1c/
+
+RUN cd /usr/local/openssl-1.1.1c/ \
+ && ./bin/openssl genpkey -genparam -algorithm EC -out ec384param.pem -pkeyopt ec_paramgen_curve:secp384r1 -pkeyopt ec_param_enc:named_curve \
+ && ./bin/openssl req -x509 -nodes -days 3650 -subj '/C=US/ST=Oregon/L=Portland/CN=www.kasoftware.com' -newkey ec:ec384param.pem -keyout myec384cert.pem -out myec384cert.pem \
+ && ./bin/openssl req -x509 -nodes -days 3650 -subj '/C=US/ST=Oregon/L=Portland/CN=www.kasoftware.com' -newkey rsa:1024 -keyout mycert.pem -out mycert.pem \
+ && ./bin/openssl genpkey -genparam -algorithm EC -out ec256param.pem -pkeyopt ec_paramgen_curve:prime256v1 -pkeyopt ec_param_enc:named_curve \
+ && ./bin/openssl req -x509 -nodes -days 3650 -subj '/C=US/ST=Oregon/L=Portland/CN=www.kasoftware.com' -newkey ec:ec256param.pem -keyout myec256cert.pem -out myec256cert.pem \
+ && ./bin/openssl genpkey -genparam -algorithm EC -out ec521param.pem -pkeyopt ec_paramgen_curve:secp521r1 -pkeyopt ec_param_enc:named_curve \
+ && ./bin/openssl req -x509 -nodes -days 3650 -subj '/C=US/ST=Oregon/L=Portland/CN=www.kasoftware.com' -newkey ec:ec521param.pem -keyout myec512cert.pem -out myec512cert.pem
+
+EXPOSE 443
+
+
+
