@@ -21,21 +21,15 @@ RUN wget https://openbsd.cs.toronto.edu/pub/OpenBSD/OpenSSH/portable/openssh-7.2
 RUN echo "sshd:x:74:74:Privilege-separated SSH:/var/empty/sshd:/sbin/nologin" >> /etc/passwd
 RUN tar -xvf openssh-7.2p2.tar.gz && cd /openssh-7.2p2 && ./configure && make && make install
 
-#not working
-#ENV PATH "$PATH:/openssh-7.6p1"
-
-# RUN 
-#change root password
+RUN groupadd ssh.tests
+RUN useradd test -m -s /bin/bash
+RUN usermod -aG ssh.tests test
+RUN echo 'test:nbanana' | chpasswd
 RUN echo 'root:nbanana' | chpasswd
-
 #RUN cat /usr/local/etc/sshd_config
 
 #edit sshd_config to permit root login
-#RUN ls /etc
 RUN sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /usr/local/etc/sshd_config
-
-#docker known bug
-#RUN sed 's@session\s*required\s*pam_loginuid.so@session optional pam_loginuid.so@g' -i /etc/pam.d/sshd
 
 #expose and run
 EXPOSE 22

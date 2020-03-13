@@ -1,0 +1,16 @@
+FROM ubuntu
+
+RUN apt-get update && apt-get install -y openssh-server \
+ && echo "sshd:x:74:74:Privilege-separated SSH:/var/empty/sshd:/sbin/nologin" >> /etc/passwd \
+ && mkdir -p /run/sshd \
+ && sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config
+
+RUN groupadd ssh.tests \
+ && useradd test -m -s /bin/bash \
+ && usermod -aG ssh.tests test \
+ && echo 'test:nbanana' | chpasswd \
+ && echo 'root:nbanana' | chpasswd
+
+#expose and run
+EXPOSE 22
+CMD ["/usr/sbin/sshd", "-D"]

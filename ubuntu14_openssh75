@@ -21,10 +21,10 @@ RUN wget https://openbsd.cs.toronto.edu/pub/OpenBSD/OpenSSH/portable/openssh-7.5
 RUN echo "sshd:x:74:74:Privilege-separated SSH:/var/empty/sshd:/sbin/nologin" >> /etc/passwd
 RUN tar -xvf openssh-7.5p1.tar.gz && cd /openssh-7.5p1 && ./configure && make && make install
 
-#not working
-#ENV PATH "$PATH:/openssh-7.5p1"
-
-#change root password
+RUN groupadd ssh.tests
+RUN useradd test -m -s /bin/bash
+RUN usermod -aG ssh.tests test
+RUN echo 'test:nbanana' | chpasswd
 RUN echo 'root:nbanana' | chpasswd
 
 #edit sshd_config to permit root login

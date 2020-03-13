@@ -1,0 +1,29 @@
+# docker build . -f ubuntu_mosquitto
+# docker build --build-arg SSL=1 . -f ubuntu_mosquitto
+
+# getting base image
+FROM ubuntu:latest
+
+# if the SSL build argument is set, the expose port is set to 8883 and the mosquitto starting parameter changes
+# otherwise, use port 1883 and do not use any starting parameter
+ARG SSL
+ARG EXPOSE_PORT=${SSL:+8883}
+ARG EXPOSE_PORT=${EXPOSE_PORT:-1883}
+ENV MOSQ_CONF=${SSL:+"-c /mosquitto/mosquitto-tls.conf"}
+
+# users
+RUN groupadd ssh.tests
+RUN useradd test -m -s /bin/bash
+RUN usermod -aG ssh.tests test
+RUN echo 'test:nbanana' | chpasswd
+RUN echo 'root:nbanana' | chpasswd
+
+# update, get baseline dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends apt-utils && apt-get install -y gcc && apt-get install -y make && apt-get install -y libz-dev && apt-get install -y mosquitto
+
+COPY ["/files/tls", "/mosquitto/"]
+COPY ["/files/mosquitto/", "/mosquitto/"]
+
+EXPOSE ${EXPOSE_PORT}
+CMD ["sh", "-c", "/usr/sbin/mosquitto ${MOSQ_CONF}"]
+

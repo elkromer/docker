@@ -24,8 +24,10 @@ RUN tar -xvf openssh-7.9p1.tar.gz && cd /openssh-7.9p1 && ./configure && make &&
 #not working
 #ENV PATH "$PATH:/openssh-7.9p1"
 
-# RUN 
-#change root password
+RUN groupadd ssh.tests
+RUN useradd test -m -s /bin/bash
+RUN usermod -aG ssh.tests test
+RUN echo 'test:nbanana' | chpasswd
 RUN echo 'root:nbanana' | chpasswd
 
 #RUN cat /usr/local/etc/sshd_config

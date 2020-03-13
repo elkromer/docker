@@ -1,42 +1,29 @@
-# Get Ubuntu base image
+
 FROM ubuntu:14.04
 
+RUN apt-get update && apt-get install -y --no-install-recommends apt-utils && apt-get install -y wget && apt-get install -y make && apt-get install -y gcc && apt-get install -y libz-dev && mkdir /var/run/sshd 
 
-#needed for wget
-RUN echo 'debconf debconf/frontend select Noninteractive' | debconf-set-selections
-ENV TERM linux
-
-# Get update and install apt-utils (needed for openssl and openssh source code)
-RUN apt-get update && apt-get install -y --no-install-recommends apt-utils
-
-# Install baseline dependencies for openssh
-RUN mkdir /var/run/sshd && apt-get install -y wget && apt-get install -y make && apt-get install -y gcc && apt-get install -y libz-dev && apt-get install -y libssl-dev
-
-# Get and install openssl source
-RUN wget https://www.openssl.org/source/openssl-1.0.2s.tar.gz
-RUN tar -xvf openssl-1.0.2s.tar.gz && cd /openssl-1.0.2s && ./config no-asm && make && make install_sw
+RUN apt-get remove openssl -y \
+  && wget https://www.openssl.org/source/openssl-1.0.2s.tar.gz --no-check-certificate \
+  && tar -xzf openssl-1.0.2s.tar.gz \
+  && cd openssl-1.0.2s/ \
+  && ./config --prefix=/usr/local/openssl-1.0.2s -fPIC \
+  && make && make install \
+  && echo "/usr/local/openssl-1.0.2s/lib/" >> /etc/ld.so.conf && ldconfig -v \
+  && cd .. && rm -rf openssl-1.0.2s.tar.gz && rm -rf openssl-1.0.2s/
 
 # Get and install openssh source
-RUN wget https://openbsd.cs.toronto.edu/pub/OpenBSD/OpenSSH/portable/openssh-8.0p1.tar.gz
-RUN echo "sshd:x:74:74:Privilege-separated SSH:/var/empty/sshd:/sbin/nologin" >> /etc/passwd
-RUN tar -xvf openssh-8.0p1.tar.gz && cd /openssh-8.0p1 && ./configure && make && make install
+RUN wget https://openbsd.cs.toronto.edu/pub/OpenBSD/OpenSSH/portable/openssh-8.0p1.tar.gz --no-check-certificate \
+  && echo "sshd:x:74:74:Privilege-separated SSH:/var/empty/sshd:/sbin/nologin" >> /etc/passwd \
+  && tar -xvf openssh-8.0p1.tar.gz && cd /openssh-8.0p1 \
+  && ./configure --with-ssl-dir=/usr/local/openssl-1.0.2s && make && make install \
+  && sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /usr/local/etc/sshd_config
 
-#not working
-#ENV PATH "$PATH:/openssh-8.0p1"
-
-# RUN 
-#change root password
+RUN groupadd ssh.tests
+RUN useradd test -m -s /bin/bash
+RUN usermod -aG ssh.tests test
+RUN echo 'test:nbanana' | chpasswd
 RUN echo 'root:nbanana' | chpasswd
 
-#RUN cat /usr/local/etc/sshd_config
-
-#edit sshd_config to permit root login
-#RUN ls /etc
-RUN sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /usr/local/etc/sshd_config
-
-#docker known bug
-#RUN sed 's@session\s*required\s*pam_loginuid.so@session optional pam_loginuid.so@g' -i /etc/pam.d/sshd
-
-#expose and run
 EXPOSE 22
 CMD ["/openssh-8.0p1/sshd", "-D"]

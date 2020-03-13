@@ -14,7 +14,9 @@ RUN usermod -aG reese.test test
 RUN echo 'test:nbanana' | chpasswd
 RUN echo 'root:nbanana' | chpasswd
 
-COPY ./files/nix.pub /home/test/.ssh/authorized_keys
+# private key is called nix_openssh_rsa_nopasswd
+COPY ./files/ssh/nix.pub /home/test/.ssh/authorized_keys
+COPY ./files/ssh/nix.pub /root/.ssh/authorized_keys
 
 EXPOSE 22
 CMD ["/openssh-7.9p1/sshd", "-D"]

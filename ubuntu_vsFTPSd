@@ -1,0 +1,59 @@
+# to properly map ports: docker run -p 21:21 -p 21100-21110:21100-21110 -d <C> 
+FROM ubuntu:18.04
+
+#needed for wget
+RUN echo 'debconf debconf/frontend select Noninteractive' | debconf-set-selections
+ENV TERM linux
+
+# Get update and install 
+RUN apt-get update && apt-get install -y --no-install-recommends apt-utils \
+    wget \
+    make \
+    gcc \
+    libz-dev \
+    libssl-dev \
+    openssl \
+    && mkdir /var/run/sshd 
+
+# Add access restricted users
+RUN groupadd ssh.tests \
+    && useradd test -m -s /bin/bash \
+    && usermod -aG ssh.tests test \
+    && echo 'test:nbanana' | chpasswd \
+    && echo 'root:nbanana' | chpasswd
+
+RUN apt-get install vsftpd -y \
+    && mv /etc/vsftpd.conf /etc/vsftpd-original.conf \
+    && mkdir /var/run/vsftpd && mkdir /var/run/vsftpd/empty && mkdir /keys && touch /var/log/vsftpd.log \
+    && openssl req -x509 -nodes -days 365 -newkey rsa:2048 -subj "/C=US/ST=Denial/L=ChapelThrill/O=Dis/CN=www.example.com" -keyout /keys/vsftpd.pem -out /keys/vsftpd.pem \
+    && chmod 755 /keys/vsftpd.pem
+
+RUN touch /etc/vsftpd.conf \
+    && echo "anonymous_enable=NO" >> /etc/vsftpd.conf \
+    && echo "local_umask=022" >> /etc/vsftpd.conf \
+    && echo "local_enable=YES" >> /etc/vsftpd.conf \
+    && echo "write_enable=YES" >> /etc/vsftpd.conf \
+    && echo "dirmessage_enable=YES" >> /etc/vsftpd.conf \
+    && echo "use_localtime=YES" >> /etc/vsftpd.conf \
+    && echo "xferlog_enable=YES" >> /etc/vsftpd.conf \
+    && echo "listen=YES" >> /etc/vsftpd.conf \
+    && echo "listen_ipv6=NO" >> /etc/vsftpd.conf \
+    && echo "pam_service_name=ftp" >> /etc/vsftpd.conf \
+    && echo "tcp_wrappers=YES" >> /etc/vsftpd.conf \
+    && echo "vsftpd_log_file=/var/log/vsftpd.log" >> /etc/vsftpd.conf \
+    && echo "log_ftp_protocol=YES" >> /etc/vsftpd.conf \
+    && echo "pasv_enable=YES" >> /etc/vsftpd.conf \
+    && echo "pasv_min_port=21100" >> /etc/vsftpd.conf \
+    && echo "pasv_max_port=21110" >> /etc/vsftpd.conf \
+    && echo "rsa_cert_file=/keys/vsftpd.pem" >> /etc/vsftpd.conf \
+    && echo "rsa_private_key_file=/keys/vsftpd.pem" >> /etc/vsftpd.conf \
+    && echo "ssl_enable=YES" >> /etc/vsftpd.conf \
+    && echo "allow_anon_ssl=NO" >> /etc/vsftpd.conf \
+    && echo "force_local_data_ssl=NO" >> /etc/vsftpd.conf \
+    && echo "force_local_logins_ssl=YES" >> /etc/vsftpd.conf \
+    && echo "ssl_tlsv1=YES" >> /etc/vsftpd.conf \
+    && echo "strict_ssl_read_eof=YES" >> /etc/vsftpd.conf
+
+#expose and run
+EXPOSE 21 990 21100-21110
+CMD ["/usr/sbin/vsftpd", "/etc/vsftpd.conf"]

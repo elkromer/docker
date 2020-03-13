@@ -1,0 +1,27 @@
+#docker run -d -it --restart=always --name=ipworksssh_openssh79 -p 50022:22 ubuntu_openssh79_certifiedkeys /bin/bash -c "/usr/local/sbin/sshd -D"
+
+FROM ubuntu:18.04
+
+RUN apt-get update && apt-get install -y --no-install-recommends apt-utils
+RUN apt-get install -y wget && apt-get install -y make && apt-get install -y gcc && apt-get install -y libz-dev && apt-get install -y libssl-dev && apt-get install -y openssh-server
+
+RUN wget https://cdn.openbsd.org/pub/OpenBSD/OpenSSH/portable/openssh-7.9p1.tar.gz
+RUN tar -xvf openssh-7.9p1.tar.gz && cd /openssh-7.9p1 && ./configure && make && make install
+
+RUN groupadd richl.devp
+RUN useradd richl2 -m -s /bin/bash
+RUN usermod -aG richl.devp richl2
+RUN echo 'richl2:nbanana' | chpasswd
+RUN echo 'root:nbanana' | chpasswd
+
+COPY ./files/openssh79/ca_user_key.pub          /usr/local/etc/ca_user_key.pub
+#COPY ./files/openssh79/id_rsa          /home/richl2/.ssh/id_rsa
+COPY ./files/openssh79/id_rsa.pub      /home/richl2/.ssh/id_rsa.pub
+COPY ./files/openssh79/id_rsa-cert.pub /home/richl2/.ssh/id_rsa-cert.pub
+RUN sed -i 's/#AuthorizedKeysCommandUser nobody/AuthorizedKeysCommandUser nobody\nTrustedUserCAKeys \/usr\/local\/etc\/ca_user_key.pub\nPasswordAuthentication no/' /usr/local/etc/sshd_config
+
+#RUN echo 'HostCertificate /usr/local/etc/ssh_host_rsa_key-cert.pub' >> /usr/local/etc/sshd_config
+
+EXPOSE 22
+
+#i broke user auth somehow but the host certificates are working

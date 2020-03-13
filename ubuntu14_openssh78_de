@@ -1,0 +1,53 @@
+# Get Ubuntu base image
+FROM ubuntu:14.04
+
+#needed for wget
+RUN echo 'debconf debconf/frontend select Noninteractive' | debconf-set-selections
+ENV TERM linux
+
+#RUN locale-gen de_DE.UTF-8  
+#ENV LANG de_DE.UTF-8  
+#ENV LANGUAGE de_DE:de  
+#ENV LC_ALL de_DE.UTF-8 
+
+# Get update and install 
+RUN apt-get update && apt-get install -y \
+    --no-install-recommends apt-utils \
+    wget \
+    make \
+    gcc \
+    libz-dev \
+    libssl-dev \
+    && mkdir /var/run/sshd 
+
+# Get and install openssl source
+RUN wget https://www.openssl.org/source/openssl-1.0.2s.tar.gz --no-check-certificate \
+    && tar -xvf openssl-1.0.2s.tar.gz \
+    && cd /openssl-1.0.2s \
+    && ./config no-asm \
+    && make \
+    && make install_sw
+
+# Get and install openssh source
+RUN wget https://openbsd.cs.toronto.edu/pub/OpenBSD/OpenSSH/portable/openssh-7.8p1.tar.gz --no-check-certificate\
+    && echo "sshd:x:74:74:Privilege-separated SSH:/var/empty/sshd:/sbin/nologin" >> /etc/passwd \
+    && tar -xvf openssh-7.8p1.tar.gz \
+    && cd /openssh-7.8p1 \
+    && ./configure \
+    && make \
+    && make install \
+    && sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /usr/local/etc/sshd_config
+
+# Add access restricted users
+RUN groupadd ssh.tests \
+    && useradd test -m -s /bin/bash \
+    && usermod -aG ssh.tests test \
+    && echo 'test:nbanana' | chpasswd \
+    && echo 'root:nbanana' | chpasswd
+
+COPY ./bash/set-locale.sh /
+RUN echo ". /set-locale.sh" >> /root/.bashrc
+
+#expose and run
+EXPOSE 22
+CMD ["/openssh-7.8p1/sshd", "-D"]

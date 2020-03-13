@@ -29,10 +29,16 @@ RUN cd /root && mkdir .gnupg && cd .gnupg && touch gpg-agent.conf && echo "pinen
 
 #need this line or else sshd fails with "missing priviledge separation directory"
 RUN echo "sshd:x:74:74:Privilege-separated SSH:/var/empty/sshd:/sbin/nologin" >> /etc/passwd
+
+RUN groupadd ssh.tests
+RUN useradd test -m -s /bin/bash
+RUN usermod -aG ssh.tests test
+RUN echo 'test:nbanana' | chpasswd
+RUN echo 'root:nbanana' | chpasswd
+
 #change root password, edit sshd_config to permit root login
-RUN echo 'root:nbanana' | chpasswd && sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config
-# docker known bug
-RUN sed 's@session\s*required\s*pam_loginuid.so@session optional pam_loginuid.so@g' -i /etc/pam.d/sshd
+RUN sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config
+
 # expose and start SSH 
 EXPOSE 22
 CMD ["/usr/sbin/sshd", "-D"]

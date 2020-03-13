@@ -1,0 +1,51 @@
+# to properly map ports: docker run -p 21:21 -p 21100-21110:21100-21110 -d <C> 
+FROM ubuntu:18.04
+
+#needed for wget
+RUN echo 'debconf debconf/frontend select Noninteractive' | debconf-set-selections
+ENV TERM linux
+
+# Get update and install 
+RUN apt-get update && apt-get install -y --no-install-recommends apt-utils \
+    wget \
+    make \
+    gcc \
+    libz-dev \
+    libssl-dev \
+    openssl \
+    && mkdir /var/run/sshd 
+
+# Add access restricted users
+RUN groupadd ssh.tests \
+    && useradd test -m -s /bin/bash \
+    && usermod -aG ssh.tests test \
+    && echo 'test:nbanana' | chpasswd \
+    && echo 'root:nbanana' | chpasswd
+
+RUN apt-get install vsftpd -y \
+    && mv /etc/vsftpd.conf /etc/vsftpd-original.conf \
+    && mkdir /var/run/vsftpd && mkdir /var/run/vsftpd/empty 
+
+RUN touch /etc/vsftpd.conf \
+    && echo "anonymous_enable=NO" >> /etc/vsftpd.conf \
+    && echo "background=NO" >> /etc/vsftpd.conf \
+    && echo "local_umask=022" >> /etc/vsftpd.conf \
+    && echo "local_enable=YES" >> /etc/vsftpd.conf \
+    && echo "write_enable=YES" >> /etc/vsftpd.conf \
+    && echo "dirmessage_enable=YES" >> /etc/vsftpd.conf \
+    && echo "use_localtime=YES" >> /etc/vsftpd.conf \
+    && echo "xferlog_enable=YES" >> /etc/vsftpd.conf \
+    && echo "listen=YES" >> /etc/vsftpd.conf \
+    && echo "listen_ipv6=NO" >> /etc/vsftpd.conf \
+    && echo "pam_service_name=ftp" >> /etc/vsftpd.conf \
+    && echo "tcp_wrappers=YES" >> /etc/vsftpd.conf \
+    && echo "vsftpd_log_file=/var/log/vsftpd.log" >> /etc/vsftpd.conf \
+    && echo "log_ftp_protocol=YES" >> /etc/vsftpd.conf \
+    && echo "pasv_enable=YES" >> /etc/vsftpd.conf \
+    && echo "pasv_addr_resolve=NO" >> /etc/vsftpd.conf \
+    && echo "pasv_min_port=21100" >> /etc/vsftpd.conf \
+    && echo "pasv_max_port=21110" >> /etc/vsftpd.conf 
+
+#expose and run
+EXPOSE 21 21100-21110
+CMD ["/usr/sbin/vsftpd", "/etc/vsftpd.conf"]

@@ -22,12 +22,14 @@ RUN wget https://openbsd.cs.toronto.edu/pub/OpenBSD/OpenSSH/portable/openssh-7.6
 RUN echo "sshd:x:74:74:Privilege-separated SSH:/var/empty/sshd:/sbin/nologin" >> /etc/passwd
 RUN tar -xvf openssh-7.6p1.tar.gz && cd /openssh-7.6p1 && ./configure && make && make install
 
-# RUN 
-#change root password
+RUN groupadd ssh.tests
+RUN useradd test -m -s /bin/bash
+RUN usermod -aG ssh.tests test
+RUN echo 'test:nbanana' | chpasswd
 RUN echo 'root:nbanana' | chpasswd
 
 #edit sshd_config to permit root login
-RUN sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /usr/local/etc/sshd_config
+RUN sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /sshd/usr/local/etc/sshd_config
 
 #expose and run
 EXPOSE 22

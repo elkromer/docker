@@ -1,0 +1,21 @@
+# getting base image
+# "SSH-2.0-OpenSSH_7.8"
+FROM centos:latest
+
+RUN yum -y upgrade && yum -y install openssh-server \
+ && sed -i 's/#PermitRootLogin no/PermitRootLogin yes/' /etc/ssh/sshd_config \
+ && /usr/bin/ssh-keygen -A \
+ && rm /run/nologin \
+ && echo "AllowUsers test root" >> /etc/ssh/sshd_config \
+ && echo "sshd:x:74:74:Privilege-separated SSH:/var/empty/sshd:/sbin/nologin" >> /etc/passwd 
+
+#change user password
+RUN adduser test \
+  && echo 'test:nbanana' | chpasswd \
+  && echo 'root:nbanana' | chpasswd \
+  && chown test:test /home/test \
+  && usermod -aG wheel test
+
+#expose and run
+EXPOSE 22
+CMD ["/usr/sbin/sshd", "-D"]
